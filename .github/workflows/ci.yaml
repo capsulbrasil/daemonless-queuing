@@ -8,10 +8,14 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    container: node:10.18-jessie
     strategy:
       matrix:
         python-version:
           - 3.11
+    services:
+      redis:
+        image: redis
 
     steps:
       - uses: actions/checkout@v3
@@ -32,3 +36,6 @@ jobs:
       - name: Perform tests
         run: |
           pipenv run python -m unittest tests/*.py
+        env:
+          REDIS_HOST: redis
+          REDIS_PORT: 6379

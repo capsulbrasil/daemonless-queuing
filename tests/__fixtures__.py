@@ -1,11 +1,14 @@
+# pyright: basic
+
 import typing
 import time
 import redis
+import os
 from src.daemonless_queuing import make_lock
 
 instance = redis.Redis(
-    host='localhost',
-    port=6379
+    host=str(os.getenv('REDIS_HOST')),
+    port=int(str(os.getenv('REDIS_PORT')))
 )
 
 lock = make_lock(instance)
