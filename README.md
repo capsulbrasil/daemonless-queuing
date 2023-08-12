@@ -52,8 +52,6 @@ lock = make_lock(instance, 'SOMETHING_ONGOING')
 
 with lock():
     # will raise if you try to run this scope again before the lock gets released
-    # you can also just block until the lock gets releasing passing the "block=True"
-    # option to make_lock
     ...
 ```
 
@@ -67,6 +65,10 @@ I couldn't find a better suiting solution for what I needed (enqueuing stuff in 
 - Functions must be provided as Python import paths
 - Function parameters must be JSON-serializable
 - Return values can't be accessed
+
+## Race condition
+
+The function returned by `make_lock` is susceptible to race condition at the moment.
 
 
 ## License

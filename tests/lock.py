@@ -10,12 +10,6 @@ from .__fixtures__ import instance
 lock = make_lock(instance, 'ONGOING_OP')
 q = Queue()
 
-blocking_lock = make_lock(instance, 'ONGOING_OP', block=True)
-
-def blocking_async_op():
-    with blocking_lock():
-        time.sleep(2)
-
 def async_op():
     try:
         with lock():
@@ -25,15 +19,6 @@ def async_op():
         q.put('raised')
 
 class TestLock(TestCase):
-    def test_blocking(self):
-        t1 = Thread(target=blocking_async_op)
-        t2 = Thread(target=blocking_async_op)
-        t1.start()
-        t2.start()
-        t1.join()
-        t2.join()
-
-
     def test_raises(self):
         t1 = Thread(target=async_op)
         t2 = Thread(target=async_op)
