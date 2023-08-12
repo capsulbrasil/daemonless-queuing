@@ -5,6 +5,7 @@ name = "pypi"
 
 [packages]
 types-redis = "*"
+redis = "*"
 
 [dev-packages]
 
