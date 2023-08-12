@@ -69,6 +69,7 @@ I couldn't find a better suiting solution for what I needed (enqueuing stuff in 
 ## Race condition
 
 The function returned by `make_lock` is susceptible to race condition at the moment.
+Make sure your asynchronous function won't be called twice at the same time.
 
 
 ## License
