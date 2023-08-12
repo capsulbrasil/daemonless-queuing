@@ -1,5 +1,6 @@
 import typing
 import contextlib
+import time
 from functools import reduce
 from .types import Redis
 
@@ -9,9 +10,9 @@ class RedisLockException(Exception):
     def __str__(self):
         return 'lock exception: {}'.format(self.lock_name)
 
-def make_lock(instance: Redis):
+def make_lock(instance: Redis, key: str | list[str], block: bool = False):
     @contextlib.contextmanager
-    def use_lock(key: str | list[str]):
+    def use_lock():
         def treat_list(action: str, *args: typing.Any) -> None:
             if isinstance(key, list):
                 result: list[bool] = []
@@ -22,10 +23,12 @@ def make_lock(instance: Redis):
             return getattr(instance, action)(key, *args)
 
         if treat_list('get'):
-            raise RedisLockException(key)
+            if not block:
+                raise RedisLockException(key)
+            while treat_list('get'):
+                time.sleep(1)
 
         treat_list('set', 1)
-        treat_list('expire', 60*60*2)
         try:
             yield
         finally:

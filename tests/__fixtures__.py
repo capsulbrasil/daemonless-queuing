@@ -11,11 +11,11 @@ instance = redis.Redis(
     port=int(str(os.getenv('REDIS_PORT')))
 )
 
-lock = make_lock(instance)
 
 def test(*args: typing.Any, **kwargs: typing.Any):
     if lock_name := kwargs.get('lock'):
-        with lock(lock_name):
+        lock = make_lock(instance, lock_name)
+        with lock():
             time.sleep(kwargs.get('sleep', 5))
             print(kwargs.get('msg', 'Test!'))
         return

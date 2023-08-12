@@ -48,10 +48,12 @@ instance = redis.Redis(
     port=6379
 )
 
-lock = make_lock(instance)
+lock = make_lock(instance, 'SOMETHING_ONGOING')
 
-with lock('SOMETHING_ONGOING'):
+with lock():
     # will raise if you try to run this scope again before the lock gets released
+    # you can also just block until the lock gets releasing passing the "block=True"
+    # option to make_lock
     ...
 ```
 
