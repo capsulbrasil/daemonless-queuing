@@ -1,6 +1,6 @@
 [project]
 name = 'daemonless_queuing'
-version = '0.0.6'
+version = '0.0.1'
 authors = [
   { name = 'João Gabriel Santos', email = 'joaosan177@gmail.com' }
 ]
