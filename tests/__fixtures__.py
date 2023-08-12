@@ -19,3 +19,7 @@ def test(*args: typing.Any, **kwargs: typing.Any):
 
     time.sleep(kwargs.get('sleep', 5))
     print(kwargs.get('msg', 'Test!'))
+
+def pong(number: int):
+    print('got: %d!' % number)
+    instance.rpush('Q1_RESULT', number)

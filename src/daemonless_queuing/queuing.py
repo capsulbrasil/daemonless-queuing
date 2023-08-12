@@ -1,10 +1,10 @@
 import typing
 import json
 import time
+import importlib
 from threading import Thread
 from multiprocessing import Process
 from queue import Queue
-from .function import get_function, parse_params_string
 from .types import Redis
 
 Options = typing.TypedDict('Options', {
@@ -30,12 +30,28 @@ Worker = typing.TypedDict('Worker', {
 })
 
 Workers: dict[str, Worker] = {}
+Threads: list[Thread] = []
+
+PubsubThread: typing.Any = None
+
+def queue_name(queue: str):
+    return 'QUEUE:%s' % queue
+
+def get_function(path: str):
+    *_, func_name = path.split('.')
+    module_name = '.'.join(_)
+    module = importlib.import_module(module_name)
+    return getattr(module, func_name)
+
 
 def make_worker(channel: str, input_queue: WorkerQueue):
     while True:
         job = input_queue.get()
+        if job == -1:
+            break
+
         function = get_function(job['function'])
-        args, kwargs = parse_params_string(job['params'])
+        args, kwargs = job['args'], job['kwargs']
 
         def fn():
             if args and kwargs: function(*args, **kwargs)
@@ -50,6 +66,8 @@ def make_worker(channel: str, input_queue: WorkerQueue):
         time.sleep(1)
 
 def on_pub(msg: SubscriptionMessage, instance: Redis):
+    global Threads
+
     event = msg['data'].decode()
     channel = ':'.join(msg['channel'].decode().split(':')[-2:])
 
@@ -58,8 +76,11 @@ def on_pub(msg: SubscriptionMessage, instance: Redis):
 
     if channel not in Workers:
         iq: WorkerQueue = Queue()
+        thread = Thread(target=make_worker, args=(channel, iq))
+        Threads += [thread]
+
         worker = Workers[channel] = typing.cast(Worker, {
-            'thread': Thread(target=make_worker, args=(channel, iq)),
+            'thread': thread,
             'input_queue': iq
         })
 
@@ -78,12 +99,13 @@ def make_enqueue(instance: Redis):
             'kwargs': kwargs
         }
 
-        return instance.rpush(json.dumps(job))
+        return instance.rpush(queue_name(queue), json.dumps(job))
 
     return enqueue
 
 
 def setup(instance: Redis, options: Options):
+    global PubsubThread
     instance.config_set('notify-keyspace-events', 'Kl')
 
     def pub_listener(msg: SubscriptionMessage):
@@ -95,5 +117,15 @@ def setup(instance: Redis, options: Options):
         for queue in options['queues']
     })
 
-    pubsub.run_in_thread(sleep_time=.1)
+    PubsubThread = pubsub.run_in_thread(sleep_time=.1)
     return make_enqueue(instance)
+
+def shutdown():
+    global PubsubThread
+    PubsubThread.stop()
+
+    for worker in Workers.values():
+        worker['input_queue'].put(-1)
+
+    for thread in Threads:
+        thread.join()

@@ -58,6 +58,13 @@ with lock('SOMETHING_ONGOING'):
 I couldn't find a better suiting solution for what I needed (enqueuing stuff in multiple queues then running the jobs in parallel). Existing solutions ([rq](https://python-rq.org/), [Celery](https://docs.celeryq.dev/en/stable/)) are hard to setup and require a daemon/broker to work. Of course this is a much simpler version of these libraries, but some don't need more than that.
 
 
+## Caveats
+
+- Functions must be provided as Python import paths
+- Function parameters must be JSON-serializable
+- Return values can't be accessed
+
+
 ## License
 
 This library is [MIT licensed](https://github.com/capsulbrasil/normalize-json/tree/master/LICENSE).
