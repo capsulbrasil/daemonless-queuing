@@ -14,7 +14,7 @@ $ pip install daemonless-queuing
 
 ```python
 import redis
-from daemonless_queuing import setup
+from daemonless_queuing import setup, shutdown
 
 instance = redis.Redis(
     host='localhost',
@@ -29,10 +29,12 @@ enqueue = setup(instance, {
 })
 
 enqueue('TESTCHAN_1', 'my_package.my_module.func_name')
-enqueue('TESTCHAN_2', 'my_package.my_module.func_name')
+enqueue('TESTCHAN_2', 'my_package.my_module.func_name', 'positional argument', 42, named_arg='Hey!')
 # ...
 
 # do some blocking stuff
+
+shutdown()
 ```
 
 ### Locking
