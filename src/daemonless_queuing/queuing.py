@@ -8,6 +8,7 @@ from queue import Queue
 from .types import Redis
 
 Options = typing.TypedDict('Options', {
+    'listen': bool,
     'queues': list[str]
 })
 
@@ -105,19 +106,21 @@ def make_enqueue(instance: Redis):
 
 
 def setup(instance: Redis, options: Options):
-    global PubsubThread
-    instance.config_set('notify-keyspace-events', 'Kl')
+    if options.get('listen', True):
+        global PubsubThread
+        instance.config_set('notify-keyspace-events', 'Kl')
 
-    def pub_listener(msg: SubscriptionMessage):
-        return on_pub(msg, instance)
+        def pub_listener(msg: SubscriptionMessage):
+            return on_pub(msg, instance)
 
-    pubsub = instance.pubsub()
-    pubsub.psubscribe(**{
-        '__keyspace@0__:QUEUE:%s' % queue: pub_listener
-        for queue in options['queues']
-    })
+        pubsub = instance.pubsub()
+        pubsub.psubscribe(**{
+            '__keyspace@0__:QUEUE:%s' % queue: pub_listener
+            for queue in options['queues']
+        })
 
-    PubsubThread = pubsub.run_in_thread(sleep_time=.1)
+        PubsubThread = pubsub.run_in_thread(sleep_time=.1)
+
     return make_enqueue(instance)
 
 def shutdown():
