@@ -92,8 +92,11 @@ def on_pub(msg: SubscriptionMessage, instance: Redis):
         worker = Workers[channel]
         worker['input_queue'].put(job)
 
-def make_enqueue(instance: Redis):
+def make_enqueue(instance: Redis, options: Options):
     def enqueue(queue: str, path: str, *args: typing.Any, **kwargs: typing.Any):
+        if queue not in options['queues']:
+            raise ValueError('invalid queue: "%s"' % queue)
+
         job = {
             'function': path,
             'args': args,
@@ -121,7 +124,7 @@ def setup(instance: Redis, options: Options):
 
         PubsubThread = pubsub.run_in_thread(sleep_time=.1)
 
-    return make_enqueue(instance)
+    return make_enqueue(instance, options)
 
 def shutdown():
     global PubsubThread
