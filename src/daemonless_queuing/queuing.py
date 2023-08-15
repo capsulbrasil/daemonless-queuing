@@ -6,7 +6,6 @@ import re
 from traceback import print_exc as xp
 from datetime import datetime
 from threading import Thread
-from multiprocessing import Process
 from queue import Queue
 from .types import Redis
 
@@ -64,9 +63,8 @@ def make_worker(channel: str, input_queue: WorkerQueue):
                 elif kwargs: function(**kwargs)
                 else: function()
 
-            child = Process(target=fn)
-            child.start()
-            child.join()
+            fn()
+
         except:
             xp()
 
