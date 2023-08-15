@@ -2,6 +2,9 @@ import typing
 import json
 import time
 import importlib
+import re
+from traceback import print_exc as xp
+from datetime import datetime
 from threading import Thread
 from multiprocessing import Process
 from queue import Queue
@@ -51,20 +54,32 @@ def make_worker(channel: str, input_queue: WorkerQueue):
         if job == -1:
             break
 
-        function = get_function(job['function'])
-        args, kwargs = job['args'], job['kwargs']
+        try:
+            function = get_function(job['function'])
+            args, kwargs = job['args'], job['kwargs']
 
-        def fn():
-            if args and kwargs: function(*args, **kwargs)
-            elif args: function(*args)
-            elif kwargs: function(**kwargs)
-            else: function()
+            def fn():
+                if args and kwargs: function(*args, **kwargs)
+                elif args: function(*args)
+                elif kwargs: function(**kwargs)
+                else: function()
 
-        child = Process(target=fn)
-        child.start()
-        child.join()
+            child = Process(target=fn)
+            child.start()
+            child.join()
+        except:
+            xp()
 
         time.sleep(1)
+
+def cast_datetime(obj: dict[str, typing.Any]):
+    for k, v in obj.items():
+        if isinstance(v, str) and re.search(r'[0-9]{4}-[0-9]{2}-[0-9]{2}', v):
+            try:
+                obj[k] = datetime.strptime(v, '%Y-%m-%d %H:%M:%S.%f')
+            except:
+                pass
+    return obj
 
 def on_pub(msg: SubscriptionMessage, instance: Redis):
     global Threads
@@ -88,9 +103,10 @@ def on_pub(msg: SubscriptionMessage, instance: Redis):
         worker['thread'].start()
 
     if tail := instance.lpop(channel):
-        job = typing.cast(Job, json.loads(tail))
+        job = typing.cast(Job, json.loads(tail, object_hook=cast_datetime))
         worker = Workers[channel]
         worker['input_queue'].put(job)
+
 
 def make_enqueue(instance: Redis, options: Options):
     def enqueue(queue: str, path: str, *args: typing.Any, **kwargs: typing.Any):
@@ -103,10 +119,9 @@ def make_enqueue(instance: Redis, options: Options):
             'kwargs': kwargs
         }
 
-        return instance.rpush(queue_name(queue), json.dumps(job))
+        return instance.rpush(queue_name(queue), json.dumps(job, default=str))
 
     return enqueue
-
 
 def setup(instance: Redis, options: Options):
     if options.get('listen', True):
