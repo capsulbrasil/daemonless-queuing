@@ -22,3 +22,6 @@ packages = [
 ]
 
 package-dir = { '' = 'src' }
+
+[tool.setuptools.package-data]
+'normalize_json' = ['py.typed']
