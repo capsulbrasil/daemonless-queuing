@@ -12,7 +12,7 @@ class RedisLockException(Exception):
 def make_lock(instance: Redis, key: str | list[str]):
     @contextlib.contextmanager
     def use_lock():
-        def treat_list(action: str, *args: typing.Any) -> None:
+        def treat_list(action: str, *args: typing.Any):
             if isinstance(key, list):
                 result: list[bool] = []
                 for k in key:
