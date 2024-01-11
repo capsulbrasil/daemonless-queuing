@@ -6,11 +6,12 @@ import re
 from traceback import print_exc as xp
 from datetime import datetime
 from threading import Thread
+from multiprocessing import Process
 from queue import Queue
 from .types import Redis
 
 Options = typing.TypedDict('Options', {
-    'listen': bool,
+    'listen': typing.NotRequired[bool],
     'queues': list[str]
 })
 
@@ -25,7 +26,14 @@ Job = typing.TypedDict('Job', {
     'kwargs': dict[str, typing.Any]
 })
 
-WorkerQueue = Queue[typing.Any]
+SerializedJob = typing.TypedDict('SerializedJob', {
+    'function': str,
+    'args': str,
+    'kwargs': str,
+    'timeout': int | None
+})
+
+WorkerQueue = Queue[SerializedJob | typing.Literal[-1]]
 
 Worker = typing.TypedDict('Worker', {
     'thread': Thread,
@@ -63,7 +71,13 @@ def make_worker(channel: str, input_queue: WorkerQueue):
                 elif kwargs: function(**kwargs)
                 else: function()
 
-            fn()
+            p = Process(target=fn)
+            p.start()
+            p.join(job['timeout'])
+
+            if p.is_alive():
+                print('function %s took too long to execute (%s secs), killing it' % (job['function'], job['timeout']))
+                p.kill()
 
         except:
             xp()
@@ -101,20 +115,21 @@ def on_pub(msg: SubscriptionMessage, instance: Redis):
         worker['thread'].start()
 
     if tail := instance.lpop(channel):
-        job = typing.cast(Job, json.loads(tail, object_hook=cast_datetime))
+        job = json.loads(tail, object_hook=cast_datetime)
         worker = Workers[channel]
         worker['input_queue'].put(job)
 
 
 def make_enqueue(instance: Redis, options: Options):
-    def enqueue(queue: str, path: str, *args: typing.Any, **kwargs: typing.Any):
+    def enqueue(queue: str, path: str, timeout: int | None, *args: typing.Any, **kwargs: typing.Any):
         if queue not in options['queues']:
             raise ValueError('invalid queue: "%s"' % queue)
 
         job = {
             'function': path,
             'args': args,
-            'kwargs': kwargs
+            'kwargs': kwargs,
+            'timeout': timeout
         }
 
         return instance.rpush(queue_name(queue), json.dumps(job, default=str))
@@ -147,4 +162,6 @@ def shutdown():
         worker['input_queue'].put(-1)
 
     for thread in Threads:
-        thread.join()
+        if thread.is_alive():
+            thread.join()
+

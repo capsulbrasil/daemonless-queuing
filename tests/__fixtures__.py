@@ -26,3 +26,7 @@ def test(*args: typing.Any, **kwargs: typing.Any):
 def pong(number: int):
     print('got: %d!' % number)
     instance.rpush('Q1_RESULT', number)
+
+def sleep(number: int, should: bool):
+    time.sleep(number)
+    instance.rpush('Q1_RESULT', str(should))
