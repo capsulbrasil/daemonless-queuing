@@ -17,7 +17,11 @@ def make_lock(instance: Redis, key: str | list[str]):
                 result: list[bool] = []
                 for k in key:
                     result.append(getattr(instance, action)(k, *args))
-                return reduce(lambda a, b : a and b, typing.cast(typing.Any, result))
+
+                def acc(a: bool, b: bool):
+                    return a and b
+
+                return reduce(acc, typing.cast(typing.Any, result))
 
             return getattr(instance, action)(key, *args)
 

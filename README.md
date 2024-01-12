@@ -28,8 +28,10 @@ enqueue = setup(instance, {
     ]
 })
 
-enqueue('TESTCHAN_1', 'my_package.my_module.func_name')
-enqueue('TESTCHAN_2', 'my_package.my_module.func_name', 'positional argument', 42, named_arg='Hey!')
+# the third positional parameter is a integer (or None) representing the timeout in seconds
+# after the timeout is reached the function subprocess will be killed
+enqueue('TESTCHAN_1', 'my_package.my_module.func_name' 0)
+enqueue('TESTCHAN_2', 'my_package.my_module.func_name', 0, 'positional argument', 42, named_arg='Hey!')
 # ...
 
 # do some blocking stuff
